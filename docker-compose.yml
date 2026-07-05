@@ -18,6 +18,7 @@ services:
       - app
     environment:
       PLAYWRIGHT_BASE_URL: http://app:8000
+      CI: ${CI:-}
     volumes:
       - ./playwright-tests/playwright-report:/app/playwright-report
       - ./playwright-tests/test-results:/app/test-results

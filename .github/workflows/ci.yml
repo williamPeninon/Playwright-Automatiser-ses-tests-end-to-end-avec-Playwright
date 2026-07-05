@@ -1,0 +1,111 @@
+# Nom affiché du workflow dans l'onglet Actions de GitHub
+name: CI
+
+# Déclencheurs : quand le workflow s'exécute automatiquement
+on:
+  # À chaque push de code sur la branche main
+  push:
+    branches: [main]
+  # À chaque pull request ciblant la branche main
+  pull_request:
+    branches: [main]
+
+# Évite d'exécuter plusieurs CI en parallèle sur la même branche
+concurrency:
+  # Identifiant unique du groupe (workflow + branche ou PR)
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # Annule une CI en cours si un nouveau commit arrive
+  cancel-in-progress: true
+
+# Liste des tâches (jobs) exécutées par le workflow
+jobs:
+  # Job unique : tests end-to-end via Playwright
+  e2e:
+    # Nom lisible du job dans l'interface GitHub Actions
+    name: Tests E2E Playwright
+    # Machine virtuelle Ubuntu fournie gratuitement par GitHub
+    runs-on: ubuntu-latest
+    # Durée maximale avant arrêt forcé (évite une CI bloquée indéfiniment)
+    timeout-minutes: 15
+
+    # Étapes exécutées séquentiellement dans le job
+    steps:
+      # Étape 1 : télécharge le code source du dépôt sur le runner
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      # Étape 2 : construit les images Docker Symfony et Playwright
+      - name: Construire les images Docker
+        run: docker compose build
+
+      # Étape 3 : démarre le conteneur Symfony en arrière-plan
+      - name: Démarrer l'application Symfony
+        run: docker compose up -d app
+
+      # Étape 4 : attend que l'application réponde avant de lancer les tests
+      - name: Attendre que l'application soit prête
+        run: |
+          # Affiche un message informatif dans les logs de la CI
+          echo "En attente de l'application sur http://localhost:8000..."
+          # Boucle jusqu'à 30 tentatives (environ 60 secondes au total)
+          for attempt in $(seq 1 30); do
+            # Vérifie que la page d'accueil répond avec un code HTTP 2xx/3xx
+            if curl --fail --silent --show-error http://localhost:8000 > /dev/null; then
+              # Succès : l'application est prête, on sort de la boucle
+              echo "Application prête (tentative ${attempt})"
+              exit 0
+            fi
+            # Pause de 2 secondes avant la prochaine tentative
+            sleep 2
+          done
+          # Échec : affiche un message d'erreur explicite
+          echo "L'application Symfony n'a pas démarré à temps"
+          # Affiche les logs du conteneur Symfony pour faciliter le débogage
+          docker compose logs app
+          # Termine l'étape avec un code d'erreur (la CI échoue)
+          exit 1
+
+      # Étape 5 : lance les 3 scénarios Playwright dans un conteneur éphémère
+      - name: Exécuter les tests Playwright
+        # Variables d'environnement passées à la commande docker compose run
+        env:
+          # Active le mode CI dans playwright.config.js (retries, forbidOnly)
+          CI: true
+        # --rm supprime le conteneur Playwright après exécution
+        run: docker compose run --rm playwright
+
+      # Étape 6 : archive le rapport HTML même si les tests échouent
+      - name: Publier le rapport Playwright
+        # S'exécute toujours (succès ou échec des tests)
+        if: always()
+        # Action officielle GitHub pour stocker des fichiers en artefact
+        uses: actions/upload-artifact@v4
+        with:
+          # Nom de l'artefact visible dans l'onglet Actions
+          name: playwright-report
+          # Dossier généré par Playwright sur le runner hôte (volume Docker)
+          path: playwright-tests/playwright-report/
+          # N'échoue pas si le dossier est absent
+          if-no-files-found: ignore
+          # Conserve l'artefact pendant 7 jours
+          retention-days: 7
+
+      # Étape 7 : archive les traces et captures uniquement en cas d'échec
+      - name: Publier les résultats de test (échec)
+        # S'exécute uniquement si une étape précédente a échoué
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          # Nom de l'artefact de débogage
+          name: playwright-test-results
+          # Dossier contenant traces, screenshots et contexte d'erreur
+          path: playwright-tests/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Étape 8 : nettoie les conteneurs et volumes Docker créés pendant la CI
+      - name: Arrêter les conteneurs
+        # S'exécute toujours pour libérer les ressources du runner
+        if: always()
+        # -v supprime aussi les volumes anonymes associés
+        run: docker compose down -v

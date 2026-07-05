@@ -14,25 +14,77 @@ formation-symfony-playwright/
     └── GUIDE-STAGIAIRE.md      # Support tutoriel pas-à-pas pour les stagiaires
 ```
 
-## Démarrage rapide
+## Prérequis
 
-Pré-requis : Docker et Docker Compose installés, connexion internet (pour le
-téléchargement des dépendances Composer et npm lors du build).
+### Outils à installer
+
+| Outil | Obligatoire pour | Installation |
+|-------|------------------|--------------|
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Lancer l'app Symfony et les tests en conteneur | macOS / Windows / Linux |
+| [Docker Compose](https://docs.docker.com/compose/) | Orchestrer les services (`app` + `playwright`) | Inclus avec Docker Desktop |
+| [Node.js](https://nodejs.org/) (v18 ou plus) | Voir l'automation en direct (`npm run test:pedagogique`) | Optionnel si Docker suffit |
+| [Git](https://git-scm.com/) | Cloner le dépôt | Recommandé |
+
+Connexion internet requise lors du premier build (téléchargement des dépendances
+Composer et npm).
+
+### Vérifier l'installation
 
 ```bash
-# 1. Construire les images
+docker --version
+docker compose version
+node --version    # optionnel, pour les tests locaux avec fenêtre visible
+npm --version     # optionnel, pour les tests locaux avec fenêtre visible
+```
+
+## Démarrage rapide
+
+```bash
+# 1. Cloner le projet (si besoin)
+git clone <url-du-depot>
+cd projet-symfony-playwrite
+
+# 2. Construire les images Docker
 docker compose build
 
-# 2. Lancer l'application Symfony seule (en arrière-plan)
+# 3. Lancer l'application Symfony (en arrière-plan)
 docker compose up -d app
 # -> disponible sur http://localhost:8000
 
-# 3. Lancer les tests Playwright contre l'application
+# 4. Lancer les tests Playwright en mode headless (CI / validation)
 docker compose run --rm playwright
+
+# 5. Consulter le rapport HTML
+npx playwright show-report playwright-tests/playwright-report
 ```
 
-Le rapport HTML des tests est généré dans `playwright-tests/playwright-report/`
-(ouvrir `index.html` dans un navigateur).
+## Voir l'automation en direct (approche pédagogique)
+
+Les tests Docker s'exécutent en mode headless (sans fenêtre visible). Pour
+**montrer l'automation** aux stagiaires, lancez les tests en local avec
+l'application Symfony déjà démarrée (`docker compose up -d app`) :
+
+```bash
+cd playwright-tests
+npm install
+npx playwright install chromium   # une seule fois, au premier lancement
+npm run test:pedagogique
+```
+
+Ce script ouvre une fenêtre Chromium, exécute les scénarios **un par un**
+(`--workers=1`) et ralentit chaque action de 800 ms (`slowMo`) pour faciliter
+le suivi visuel.
+
+### Commandes Playwright utiles
+
+| Commande | Où l'exécuter | Usage |
+|----------|---------------|-------|
+| `docker compose run --rm playwright` | Racine du projet | Tests headless via Docker |
+| `npm run test:headed` | `playwright-tests/` | Voir le navigateur, vitesse normale |
+| `npm run test:pedagogique` | `playwright-tests/` | Voir le navigateur, ralenti et séquentiel |
+| `npx playwright test --ui` | `playwright-tests/` | Mode interactif pas-à-pas |
+| `npm run report` | `playwright-tests/` | Ouvrir le rapport HTML |
+| `npx playwright show-report playwright-tests/playwright-report` | Racine du projet | Ouvrir le rapport depuis la racine |
 
 ## Application de démonstration
 
@@ -56,3 +108,30 @@ courante pour écrire des sélecteurs Playwright robustes.
 | 3 | Suppression d'une tâche existante | `playwright-tests/tests/todo.spec.js` |
 
 Pour les stagiaires, voir le guide pas-à-pas : `support-formation/GUIDE-STAGIAIRE.md`.
+
+## Intégration continue (GitHub Actions)
+
+À chaque push ou pull request sur la branche `main`, la CI exécute
+automatiquement les tests E2E Playwright via Docker Compose.
+
+Workflow : `.github/workflows/ci.yml`
+
+Étapes exécutées :
+1. Construction des images Docker (`app` Symfony + `playwright`)
+2. Démarrage de l'application Symfony
+3. Attente de disponibilité sur `http://localhost:8000`
+4. Lancement des 3 scénarios Playwright en mode headless
+5. Publication du rapport HTML en artefact GitHub (onglet **Actions**)
+
+En CI, Playwright active automatiquement `forbidOnly` et 1 retry en cas
+d'échec (voir `playwright.config.js`).
+
+Reproduire la CI en local :
+
+```bash
+CI=true docker compose build
+docker compose up -d app
+# attendre que http://localhost:8000 réponde
+CI=true docker compose run --rm playwright
+docker compose down -v
+```
