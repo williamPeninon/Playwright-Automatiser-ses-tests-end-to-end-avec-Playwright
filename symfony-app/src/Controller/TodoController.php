@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 // Importe l'attribut PHP pour déclarer les routes
 use Symfony\Component\Routing\Annotation\Route;
 
-// Contrôleur principal de la Todo List : gère l'affichage, l'ajout et la suppression
+// Contrôleur principal de la Todo List : affichage, ajout, suppression et statut terminé
 class TodoController extends AbstractController
 {
     // Route GET / : affiche la page d'accueil avec la liste des tâches
@@ -51,6 +51,17 @@ class TodoController extends AbstractController
     {
         // Supprime la tâche correspondante de la session
         $storage->remove($id);
+
+        // Redirige vers la page d'accueil pour afficher la liste mise à jour
+        return $this->redirectToRoute('todo_index');
+    }
+
+    // Route POST /toggle/{id} : bascule l'état terminé / en cours d'une tâche
+    #[Route('/toggle/{id}', name: 'todo_toggle', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function toggle(int $id, TodoStorage $storage): RedirectResponse
+    {
+        // Inverse le statut "terminée" de la tâche identifiée
+        $storage->toggle($id);
 
         // Redirige vers la page d'accueil pour afficher la liste mise à jour
         return $this->redirectToRoute('todo_index');

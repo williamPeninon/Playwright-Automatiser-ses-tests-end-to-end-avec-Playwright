@@ -36,8 +36,8 @@ class TodoStorage
         // Calcule le prochain identifiant (1 si la liste est vide, sinon max + 1)
         $nextId = $todos === [] ? 1 : (max(array_column($todos, 'id')) + 1);
 
-        // Ajoute la nouvelle tâche au tableau
-        $todos[] = ['id' => $nextId, 'label' => $label];
+        // Ajoute la nouvelle tâche au tableau (non terminée par défaut)
+        $todos[] = ['id' => $nextId, 'label' => $label, 'done' => false];
         // Persiste le tableau mis à jour dans la session
         $this->session()->set(self::SESSION_KEY, $todos);
     }
@@ -52,6 +52,25 @@ class TodoStorage
         ));
 
         // Réindexe et sauvegarde la liste filtrée dans la session
+        $this->session()->set(self::SESSION_KEY, $todos);
+    }
+
+    // Bascule l'état "terminée" d'une tâche (terminée ↔ en cours)
+    public function toggle(int $id): void
+    {
+        // Récupère toutes les tâches pour modifier celle ciblée
+        $todos = $this->all();
+
+        // Parcourt le tableau et inverse le booléen done de la tâche correspondante
+        foreach ($todos as &$todo) {
+            if ($todo['id'] === $id) {
+                $todo['done'] = !($todo['done'] ?? false);
+                break;
+            }
+        }
+        unset($todo);
+
+        // Persiste la liste mise à jour dans la session
         $this->session()->set(self::SESSION_KEY, $todos);
     }
 

@@ -50,4 +50,36 @@ test.describe('Application Todo List - parcours utilisateur', () => {
     await expect(page.getByTestId('todo-list')).not.toContainText('Tâche à supprimer');
   });
 
+  // Scénario 4 : simule le marquage d'une tâche comme terminée puis sa réouverture
+  test('Scénario 4 : un stagiaire marque une tâche comme terminée', async ({ page }) => {
+    // Ouvre la page d'accueil
+    await page.goto('/');
+
+    // Ajoute une tâche dédiée pour rendre ce test autonome
+    await page.getByTestId('todo-input').fill('Tâche à terminer');
+    // Soumet le formulaire d'ajout
+    await page.getByTestId('add-button').click();
+    // Vérifie que le compteur affiche 1 tâche restante
+    await expect(page.getByTestId('todo-counter')).toHaveText('1 tâche restante');
+
+    // Cible la ligne de la tâche créée et clique sur "Terminer"
+    const todoItem = page.getByTestId('todo-item').filter({ hasText: 'Tâche à terminer' });
+    await todoItem.getByTestId('toggle-button').click();
+
+    // Vérifie que la tâche est marquée comme terminée (attribut data-completed)
+    await expect(todoItem).toHaveAttribute('data-completed', 'true');
+    // Vérifie que le libellé est barré visuellement (classe CSS is-done)
+    await expect(todoItem.getByTestId('todo-label')).toHaveClass(/is-done/);
+    // Vérifie que le compteur indique 0 tâche restante
+    await expect(page.getByTestId('todo-counter')).toHaveText('0 tâche restante');
+
+    // Clique sur "Réouvrir" pour remettre la tâche en cours
+    await todoItem.getByTestId('toggle-button').click();
+
+    // Vérifie que la tâche n'est plus marquée terminée
+    await expect(todoItem).not.toHaveAttribute('data-completed', 'true');
+    // Vérifie que le compteur repasse à 1 tâche restante
+    await expect(page.getByTestId('todo-counter')).toHaveText('1 tâche restante');
+  });
+
 });
