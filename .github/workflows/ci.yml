@@ -32,7 +32,7 @@ jobs:
     steps:
       # Étape 1 : télécharge le code source du dépôt sur le runner
       - name: Récupérer le code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Étape 2 : construit les images Docker Symfony et Playwright
       - name: Construire les images Docker
@@ -78,8 +78,8 @@ jobs:
       - name: Publier le rapport Playwright
         # S'exécute toujours (succès ou échec des tests)
         if: always()
-        # Action officielle GitHub pour stocker des fichiers en artefact
-        uses: actions/upload-artifact@v4
+        # Action officielle GitHub pour stocker des fichiers en artefact (Node 24)
+        uses: actions/upload-artifact@v6
         with:
           # Nom de l'artefact visible dans l'onglet Actions
           name: playwright-report
@@ -94,7 +94,7 @@ jobs:
       - name: Publier les résultats de test (échec)
         # S'exécute uniquement si une étape précédente a échoué
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           # Nom de l'artefact de débogage
           name: playwright-test-results

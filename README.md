@@ -123,6 +123,12 @@ Workflow : `.github/workflows/ci.yml`
 4. Lancement des 3 scénarios Playwright en mode headless
 5. Publication du rapport HTML en artefact GitHub (onglet **Actions**)
 
+Pour consulter le rapport après une CI :
+1. Ouvrir l'onglet **Actions** du dépôt GitHub
+2. Cliquer sur l'exécution souhaitée
+3. Télécharger l'artefact **`playwright-report`**
+4. Décompresser le zip et ouvrir `index.html` dans un navigateur
+
 En CI, Playwright active automatiquement `forbidOnly` et 1 retry en cas
 d'échec (voir `playwright.config.js`).
 
