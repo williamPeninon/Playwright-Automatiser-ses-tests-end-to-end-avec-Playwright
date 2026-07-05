@@ -1,0 +1,24 @@
+services:
+  app:
+    build:
+      context: ./symfony-app
+    container_name: symfony-todo-app
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: dev
+      APP_DEBUG: "1"
+      APP_SECRET: changeme_pour_la_formation
+
+  playwright:
+    build:
+      context: ./playwright-tests
+    container_name: playwright-tests
+    depends_on:
+      - app
+    environment:
+      PLAYWRIGHT_BASE_URL: http://app:8000
+    volumes:
+      - ./playwright-tests/playwright-report:/app/playwright-report
+      - ./playwright-tests/test-results:/app/test-results
+    command: ["npx", "playwright", "test"]

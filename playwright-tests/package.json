@@ -1,0 +1,14 @@
+{
+  "name": "playwright-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scénarios de tests Playwright pour l'application Symfony de formation (Todo List).",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0"
+  }
+}
