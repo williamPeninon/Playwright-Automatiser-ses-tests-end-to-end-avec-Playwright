@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
+    <!-- Encodage des caractères : indispensable pour afficher correctement les accents -->
     <meta charset="UTF-8">
+    <!-- Viewport : adapte la page aux écrans mobiles (responsive) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ma Todo List - Formation Symfony &amp; Playwright</title>
+
+
+
+    
+    <!-- Styles CSS embarqués pour garder l’exemple simple (sans fichier externe) -->
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; color: #222; }
         h1 { color: #1E2761; }
@@ -12,26 +20,79 @@
         button { padding: 8px 16px; font-size: 16px; cursor: pointer; }
         ul { list-style: none; padding: 0; }
         li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .todo-actions { display: flex; gap: 8px; }
+        .is-done { text-decoration: line-through; color: #888; }
+        .todo-counter { margin-bottom: 16px; color: #555; font-size: 14px; }
     </style>
 </head>
 <body>
+    <!--
+      data-testid : attribut dédié aux tests automatisés (Playwright).
+      On sélectionne l’élément avec page.getByTestId('page-title') plutôt
+      que par le texte ou le CSS, ce qui rend les tests plus stables.
+    -->
     <h1 data-testid="page-title">Ma Todo List</h1>
-    <p>Petite application Symfony volontairement simple, utilisée comme support pour écrire des tests Playwright....</p>
+    <p>Petite application Symfony volontairement simple, utilisée comme support pour écrire des tests Playwright.</p>
 
+    <!--
+      Formulaire d’ajout d’une tâche.
+      method="post" : envoie les données au serveur sans les mettre dans l’URL.
+      action="{{ path('todo_add') }}" : Twig génère l’URL à partir du nom de route Symfony.
+      required : le navigateur refuse d’envoyer le formulaire si le champ est vide.
+    -->
     <form class="add-form" method="post" action="{{ path('todo_add') }}" data-testid="add-form">
+        <!-- name="label" : clé envoyée au contrôleur ($_POST['label'] / Request) -->
         <input type="text" name="label" placeholder="Nouvelle tâche" data-testid="todo-input" required>
         <button type="submit" data-testid="add-button">Ajouter</button>
     </form>
 
+    {#
+      Calcul du nombre de tâches non terminées.
+      {% set ... %} crée une variable Twig.
+      |filter et |length sont des filtres Twig (équivalent de array_filter + count en PHP).
+    #}
+    {% set remaining = todos|filter(t => not (t.done|default(false)))|length %}
+    <p class="todo-counter" data-testid="todo-counter">
+        {# Opérateur ternaire Twig pour le pluriel : "1 tâche restante" / "2 tâches restantes" #}
+        {{ remaining }} tâche{{ remaining > 1 ? 's' : '' }} restante{{ remaining > 1 ? 's' : '' }}
+    </p>
+
+    <!-- Liste des tâches : chaque <li> représente une todo -->
     <ul data-testid="todo-list">
+        {#
+          Boucle Twig : pour chaque élément du tableau "todos" passé par le contrôleur.
+          {% else %} s’affiche uniquement si la liste est vide (pas besoin d’un if séparé).
+        #}
         {% for todo in todos %}
-            <li data-testid="todo-item">
-                <span data-testid="todo-label">{{ todo.label }}</span>
-                <form method="post" action="{{ path('todo_delete', { id: todo.id }) }}">
-                    <button type="submit" data-testid="delete-button">Supprimer</button>
-                </form>
+            <!--
+              data-completed="true" : marqueur HTML utile aux tests pour savoir
+              si la tâche est déjà terminée, sans dépendre du style CSS.
+            -->
+            <li data-testid="todo-item"{% if todo.done|default(false) %} data-completed="true"{% endif %}>
+                <!--
+                  class conditionnelle : "is-done" barre le texte si la tâche est terminée.
+                  {{ todo.label }} affiche la valeur (échappée automatiquement par Twig = XSS-safe).
+                -->
+                <span data-testid="todo-label" class="{{ todo.done|default(false) ? 'is-done' : '' }}">{{ todo.label }}</span>
+
+                <!-- Actions : un formulaire par action (toggle / delete) pour rester simple en HTTP -->
+                <div class="todo-actions">
+                    <!--
+                      path('todo_toggle', { id: todo.id }) : génère une URL avec un paramètre,
+                      ex. /todo/3/toggle. Le contrôleur reçoit l’id et bascule done ↔ pas done.
+                    -->
+                    <form method="post" action="{{ path('todo_toggle', { id: todo.id }) }}">
+                        <button type="submit" data-testid="toggle-button">
+                            {{ todo.done|default(false) ? 'Réouvrir' : 'Terminer' }}
+                        </button>
+                    </form>
+                    <form method="post" action="{{ path('todo_delete', { id: todo.id }) }}">
+                        <button type="submit" data-testid="delete-button">Supprimer</button>
+                    </form>
+                </div>
             </li>
         {% else %}
+            <!-- État vide : affiché quand il n’y a aucune tâche -->
             <li data-testid="empty-state">Aucune tâche pour le moment</li>
         {% endfor %}
     </ul>
