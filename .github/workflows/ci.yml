@@ -3,9 +3,10 @@ name: CI
 
 # Déclencheurs : quand le workflow s'exécute automatiquement
 on:
-  # À chaque push de code sur la branche main
+  # À chaque push de code, y compris la création d'une nouvelle branche
   push:
-    branches: [main]
+    branches:
+      - "**"
   # À chaque pull request ciblant la branche main
   pull_request:
     branches: [main]
