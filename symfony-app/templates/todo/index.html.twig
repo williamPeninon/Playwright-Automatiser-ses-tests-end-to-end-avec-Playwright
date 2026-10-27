@@ -31,6 +31,8 @@
         {{ remaining }} tâche{{ remaining > 1 ? 's' : '' }} restante{{ remaining > 1 ? 's' : '' }}
     </p>
 
+    <p>Test d'ajout d'élement dans le fichier de vue Twig (demo push for ci/cd)</p>
+
     <ul data-testid="todo-list">
         {% for todo in todos %}
             <li data-testid="todo-item"{% if todo.done|default(false) %} data-completed="true"{% endif %}>
