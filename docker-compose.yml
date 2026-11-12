@@ -1,25 +1,45 @@
+# Orchestration de la formation :
+#   - app        : l'application Symfony à tester (toujours dans Docker)
+#   - playwright : (optionnel) exécution des tests dans l'image officielle Playwright,
+#                  utile si Node.js n'est pas installé ou pour reproduire la CI.
 services:
   app:
     build:
       context: ./symfony-app
     container_name: symfony-todo-app
+    # Nom réseau utilisé par le conteneur Playwright. Attention : ne pas utiliser
+    # "app" dans une URL, ".app" est un domaine que les navigateurs forcent en HTTPS.
+    networks:
+      default:
+        aliases: [todo-app]
     ports:
       - "8000:8000"
     environment:
       APP_ENV: dev
       APP_DEBUG: "1"
       APP_SECRET: changeme_pour_la_formation
+    # L'application est déclarée "healthy" quand la page d'accueil répond
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/') === false ? 1 : 0);"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
 
   playwright:
     build:
       context: ./playwright-tests
     container_name: playwright-tests
     depends_on:
-      - app
+      app:
+        condition: service_healthy
+    # Recommandé par Playwright pour Chromium dans Docker
+    ipc: host
+    init: true
     environment:
-      PLAYWRIGHT_BASE_URL: http://app:8000
+      PLAYWRIGHT_BASE_URL: http://todo-app:8000
       CI: ${CI:-}
     volumes:
       - ./playwright-tests/playwright-report:/app/playwright-report
       - ./playwright-tests/test-results:/app/test-results
+      - ./playwright-tests/junit:/app/junit
     command: ["npx", "playwright", "test"]

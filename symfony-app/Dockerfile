@@ -17,6 +17,10 @@ RUN apt-get update \
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
 
+# Le serveur PHP intégré est mono-processus par défaut : on lui donne plusieurs
+# workers pour supporter les tests Playwright exécutés en parallèle.
+ENV PHP_CLI_SERVER_WORKERS=8
+
 EXPOSE 8000
 
 # Serveur PHP intégré : suffisant pour un environnement de formation,

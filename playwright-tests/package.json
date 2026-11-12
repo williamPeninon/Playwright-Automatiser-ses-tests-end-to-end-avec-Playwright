@@ -1,15 +1,24 @@
 {
   "name": "playwright-tests",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Scénarios de tests Playwright pour l'application Symfony de formation (Todo List).",
+  "description": "Suite de tests Playwright de la formation « Automatiser ses tests end-to-end avec Playwright » (2 jours).",
   "scripts": {
     "test": "playwright test",
-    "test:headed": "playwright test --headed",
-    "test:pedagogique": "PLAYWRIGHT_SLOW_MO=800 playwright test --headed --workers=1",
+    "test:chromium": "playwright test --project=chromium",
+    "test:jour1": "playwright test tests/jour1 --project=chromium",
+    "test:jour2": "playwright test tests/jour2 --project=chromium",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:headed": "playwright test --project=chromium --headed",
+    "test:pedagogique": "cross-env PLAYWRIGHT_SLOW_MO=800 playwright test --project=chromium --headed --workers=1",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --project=chromium --debug",
+    "test:solutions": "playwright test --config=playwright.solutions.config.js",
+    "codegen": "playwright codegen http://localhost:8000",
     "report": "playwright show-report"
   },
   "devDependencies": {
-    "@playwright/test": "1.45.0"
+    "@playwright/test": "1.64.1",
+    "cross-env": "10.1.0"
   }
 }

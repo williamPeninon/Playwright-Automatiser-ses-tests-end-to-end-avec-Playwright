@@ -1,101 +1,126 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
-    <!-- Encodage des caractères : indispensable pour afficher correctement les accents -->
     <meta charset="UTF-8">
-    <!-- Viewport : adapte la page aux écrans mobiles (responsive) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ma Todo List - Formation Symfony &amp; Playwright</title>
-
-
-
-    
-    <!-- Styles CSS embarqués pour garder l’exemple simple (sans fichier externe) -->
+    <title>Ma Todo List - Formation Playwright</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; color: #222; }
+        body { font-family: Arial, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
         h1 { color: #1E2761; }
-        form.add-form { display: flex; gap: 8px; margin-bottom: 24px; }
-        input[type="text"] { flex: 1; padding: 8px; font-size: 16px; }
-        button { padding: 8px 16px; font-size: 16px; cursor: pointer; }
+        form.add-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 16px; }
+        .field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+        .field.grow { flex: 1; }
+        input[type="text"], select { padding: 8px; font-size: 16px; }
+        button { padding: 8px 14px; font-size: 15px; cursor: pointer; }
+        nav.filters { display: flex; gap: 12px; margin: 8px 0 16px; }
+        nav.filters a[aria-current="page"] { font-weight: bold; text-decoration: none; color: #1E2761; }
         ul { list-style: none; padding: 0; }
-        li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-        .todo-actions { display: flex; gap: 8px; }
+        li { display: flex; gap: 8px; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        li .todo-label { flex: 1; }
         .is-done { text-decoration: line-through; color: #888; }
-        .todo-counter { margin-bottom: 16px; color: #555; font-size: 14px; }
+        .badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #eef; }
+        .badge.haute { background: #fdd; }
+        .toast { background: #e6f6ee; border: 1px solid #39a36b; padding: 8px 12px; margin-bottom: 16px; }
+        .stats { margin-top: 24px; padding: 12px; background: #f5f7fb; }
+        footer { display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
-    <!--
-      data-testid : attribut dédié aux tests automatisés (Playwright).
-      On sélectionne l’élément avec page.getByTestId('page-title') plutôt
-      que par le texte ou le CSS, ce qui rend les tests plus stables.
-    -->
-    <h1 data-testid="page-title">Ma Todo List</h1>
-    <p>Petite application Symfony volontairement simple, utilisée comme support pour écrire des tests Playwright.</p>
+    <header>
+        <h1 data-testid="page-title">Ma Todo List</h1>
+        <p>Application Symfony volontairement simple, utilisée comme support pour écrire des tests Playwright.</p>
+    </header>
 
-    <!--
-      Formulaire d’ajout d’une tâche.
-      method="post" : envoie les données au serveur sans les mettre dans l’URL.
-      action="{{ path('todo_add') }}" : Twig génère l’URL à partir du nom de route Symfony.
-      required : le navigateur refuse d’envoyer le formulaire si le champ est vide.
-    -->
+    {# Message "toast" : visible quelques secondes puis supprimé par JavaScript (Jour 1 - éléments dynamiques) #}
+    {% for message in app.flashes('success') %}
+        <div class="toast" role="status" data-testid="toast">{{ message }}</div>
+    {% endfor %}
+
     <form class="add-form" method="post" action="{{ path('todo_add') }}" data-testid="add-form">
-        <!-- name="label" : clé envoyée au contrôleur ($_POST['label'] / Request) -->
-        <input type="text" name="label" placeholder="Nouvelle tâche" data-testid="todo-input" required>
+        <div class="field grow">
+            <label for="todo-input">Nouvelle tâche</label>
+            <input type="text" id="todo-input" name="label" placeholder="Ex. : Réviser les locators" data-testid="todo-input" required>
+        </div>
+        <div class="field">
+            <label for="priority">Priorité</label>
+            <select id="priority" name="priority" data-testid="priority-select">
+                {% for value, label in priorities %}
+                    <option value="{{ value }}" {{ value == 'normale' ? 'selected' }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <button type="submit" data-testid="add-button">Ajouter</button>
     </form>
 
-    {#
-      Calcul du nombre de tâches non terminées.
-      {% set ... %} crée une variable Twig.
-      |filter et |length sont des filtres Twig (équivalent de array_filter + count en PHP).
-    #}
-    {% set remaining = todos|filter(t => not (t.done|default(false)))|length %}
-    <p class="todo-counter" data-testid="todo-counter">
-        {# Opérateur ternaire Twig pour le pluriel : "1 tâche restante" / "2 tâches restantes" #}
-        {{ remaining }} tâche{{ remaining > 1 ? 's' : '' }} restante{{ remaining > 1 ? 's' : '' }}
-    </p>
+    <nav class="filters" aria-label="Filtres">
+        <a href="{{ path('todo_index') }}" {{ filter == 'all' ? 'aria-current="page"' }} data-testid="filter-all">Toutes</a>
+        <a href="{{ path('todo_index', { filter: 'active' }) }}" {{ filter == 'active' ? 'aria-current="page"' }} data-testid="filter-active">Actives</a>
+        <a href="{{ path('todo_index', { filter: 'done' }) }}" {{ filter == 'done' ? 'aria-current="page"' }} data-testid="filter-done">Terminées</a>
+    </nav>
 
-    <p>testtttt !!!!!</p>
-    <!-- Liste des tâches : chaque <li> représente une todo -->
-    <ul data-testid="todo-list">
-        {#
-          Boucle Twig : pour chaque élément du tableau "todos" passé par le contrôleur.
-          {% else %} s’affiche uniquement si la liste est vide (pas besoin d’un if séparé).
-        #}
+    <ul data-testid="todo-list" aria-label="Liste des tâches">
         {% for todo in todos %}
-            <!--
-              data-completed="true" : marqueur HTML utile aux tests pour savoir
-              si la tâche est déjà terminée, sans dépendre du style CSS.
-            -->
-            <li data-testid="todo-item"{% if todo.done|default(false) %} data-completed="true"{% endif %}>
-                <!--
-                  class conditionnelle : "is-done" barre le texte si la tâche est terminée.
-                  {{ todo.label }} affiche la valeur (échappée automatiquement par Twig = XSS-safe).
-                -->
-                <span data-testid="todo-label" class="{{ todo.done|default(false) ? 'is-done' : '' }}">{{ todo.label }}</span>
-
-                <!-- Actions : un formulaire par action (toggle / delete) pour rester simple en HTTP -->
-                <div class="todo-actions">
-                    <!--
-                      path('todo_toggle', { id: todo.id }) : génère une URL avec un paramètre,
-                      ex. /todo/3/toggle. Le contrôleur reçoit l’id et bascule done ↔ pas done.
-                    -->
-                    <form method="post" action="{{ path('todo_toggle', { id: todo.id }) }}">
-                        <button type="submit" data-testid="toggle-button">
-                            {{ todo.done|default(false) ? 'Réouvrir' : 'Terminer' }}
-                        </button>
-                    </form>
-                    <form method="post" action="{{ path('todo_delete', { id: todo.id }) }}">
-                        <button type="submit" data-testid="delete-button">Supprimer</button>
-                    </form>
-                </div>
+            <li data-testid="todo-item" data-completed="{{ todo.done ? 'true' : 'false' }}">
+                <span class="todo-label {{ todo.done ? 'is-done' }}" data-testid="todo-label">{{ todo.label }}</span>
+                <span class="badge {{ todo.priority }}" data-testid="todo-priority">{{ priorities[todo.priority] }}</span>
+                <form method="post" action="{{ path('todo_toggle', { id: todo.id, filter: filter }) }}">
+                    <button type="submit" data-testid="toggle-button">{{ todo.done ? 'Réouvrir' : 'Terminer' }}</button>
+                </form>
+                <form method="post" action="{{ path('todo_delete', { id: todo.id }) }}">
+                    <button type="submit" data-testid="delete-button">Supprimer</button>
+                </form>
             </li>
         {% else %}
-            <!-- État vide : affiché quand il n’y a aucune tâche -->
             <li data-testid="empty-state">Aucune tâche pour le moment</li>
         {% endfor %}
     </ul>
+
+    <footer>
+        {% set remaining = stats.remaining %}
+        <p data-testid="todo-counter">{{ remaining }} {{ remaining > 1 ? 'tâches restantes' : 'tâche restante' }}</p>
+        {% if stats.total > 0 %}
+            <form method="post" action="{{ path('todo_clear') }}" id="clear-form">
+                <button type="submit" data-testid="clear-button">Vider la liste</button>
+            </form>
+        {% endif %}
+    </footer>
+
+    {# Statistiques chargées en AJAX avec un délai serveur aléatoire (0,5 à 2 s) #}
+    <section class="stats" aria-label="Statistiques" data-testid="stats">
+        <p data-testid="stats-loading">Chargement des statistiques…</p>
+    </section>
+
+    <script>
+        // 1. Le toast disparaît après 3 secondes.
+        document.querySelectorAll('[data-testid="toast"]').forEach((toast) => {
+            setTimeout(() => toast.remove(), 3000);
+        });
+
+        // 2. Demande de confirmation avant de vider la liste (boîte de dialogue native).
+        const clearForm = document.getElementById('clear-form');
+        if (clearForm) {
+            clearForm.addEventListener('submit', (event) => {
+                if (!confirm('Supprimer toutes les tâches ?')) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        // 3. Chargement asynchrone des statistiques.
+        const stats = document.querySelector('[data-testid="stats"]');
+        fetch('{{ path('api_stats') }}')
+            .then((response) => {
+                if (!response.ok) { throw new Error('HTTP ' + response.status); }
+                return response.json();
+            })
+            .then((data) => {
+                stats.innerHTML =
+                    '<p data-testid="stats-content">Total : <strong data-testid="stats-total">' + data.total + '</strong>'
+                    + ' · Terminées : <strong data-testid="stats-done">' + data.done + '</strong></p>';
+            })
+            .catch(() => {
+                stats.innerHTML = '<p role="alert" data-testid="stats-error">Statistiques indisponibles</p>';
+            });
+    </script>
 </body>
 </html>

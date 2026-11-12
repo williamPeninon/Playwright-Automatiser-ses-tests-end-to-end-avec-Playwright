@@ -1,0 +1,5 @@
+[
+  { "label": "Installer Node.js", "priority": "Haute" },
+  { "label": "Écrire un premier test", "priority": "Normale" },
+  { "label": "Lire le rapport HTML", "priority": "Basse" }
+]

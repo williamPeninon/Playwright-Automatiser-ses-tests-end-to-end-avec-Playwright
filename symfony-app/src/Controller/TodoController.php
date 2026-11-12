@@ -1,58 +1,101 @@
-<?php // Début du fichier PHP
+<?php
 
-// Espace de noms : regroupe les classes du contrôleur de l'application
 namespace App\Controller;
 
-// Importe le service qui gère le stockage des tâches en session
 use App\Service\TodoStorage;
-// Importe la classe de base des contrôleurs Symfony
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-// Importe la réponse HTTP de type redirection
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-// Importe l'objet représentant la requête HTTP entrante
 use Symfony\Component\HttpFoundation\Request;
-// Importe la réponse HTTP standard (page HTML)
 use Symfony\Component\HttpFoundation\Response;
-// Importe l'attribut PHP pour déclarer les routes
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
-// Contrôleur principal de la Todo List : gère l'affichage, l'ajout et la suppression
+/**
+ * Contrôleur unique de la Todo List de formation.
+ *
+ * Chaque route correspond à un comportement testé pendant la formation :
+ *   GET  /                 -> liste (+ filtre ?filter=all|active|done)  [Jour 1]
+ *   POST /add              -> ajout d'une tâche avec priorité (select)  [Jour 1]
+ *   POST /toggle/{id}      -> terminer / réouvrir une tâche             [Jour 1]
+ *   POST /delete/{id}      -> suppression                               [Jour 1]
+ *   POST /clear            -> vider la liste (confirmation JS)          [Jour 1 - dialogues]
+ *   GET  /api/stats        -> statistiques JSON, réponse volontairement lente [Jour 1 - synchro]
+ */
 class TodoController extends AbstractController
 {
-    // Route GET / : affiche la page d'accueil avec la liste des tâches
+    private const FILTERS = ['all', 'active', 'done'];
+
     #[Route('/', name: 'todo_index', methods: ['GET'])]
-    public function index(TodoStorage $storage): Response
+    public function index(Request $request, TodoStorage $storage): Response
     {
-        // Rend le template Twig en lui passant toutes les tâches stockées
+        $filter = (string) $request->query->get('filter', 'all');
+        if (!in_array($filter, self::FILTERS, true)) {
+            $filter = 'all';
+        }
+
         return $this->render('todo/index.html.twig', [
-            'todos' => $storage->all(),
+            'todos' => $storage->filtered($filter),
+            'filter' => $filter,
+            'stats' => $storage->stats(),
+            'priorities' => TodoStorage::PRIORITIES,
         ]);
     }
 
-    // Route POST /add : reçoit le formulaire d'ajout d'une nouvelle tâche
     #[Route('/add', name: 'todo_add', methods: ['POST'])]
     public function add(Request $request, TodoStorage $storage): RedirectResponse
     {
-        // Récupère et nettoie le texte saisi dans le champ "label" du formulaire
         $label = trim((string) $request->request->get('label', ''));
+        $priority = (string) $request->request->get('priority', 'normale');
 
-        // N'ajoute la tâche que si le libellé n'est pas vide
         if ($label !== '') {
-            $storage->add($label);
+            $storage->add($label, $priority);
+            $this->addFlash('success', sprintf('Tâche « %s » ajoutée', $label));
         }
 
-        // Redirige vers la page d'accueil pour afficher la liste mise à jour
         return $this->redirectToRoute('todo_index');
     }
 
-    // Route POST /delete/{id} : supprime une tâche par son identifiant numérique
+    #[Route('/toggle/{id}', name: 'todo_toggle', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function toggle(int $id, Request $request, TodoStorage $storage): RedirectResponse
+    {
+        $storage->toggle($id);
+
+        return $this->redirectToRoute('todo_index', ['filter' => $request->query->get('filter', 'all')]);
+    }
+
     #[Route('/delete/{id}', name: 'todo_delete', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function delete(int $id, TodoStorage $storage): RedirectResponse
     {
-        // Supprime la tâche correspondante de la session
         $storage->remove($id);
+        $this->addFlash('success', 'Tâche supprimée');
 
-        // Redirige vers la page d'accueil pour afficher la liste mise à jour
         return $this->redirectToRoute('todo_index');
+    }
+
+    #[Route('/clear', name: 'todo_clear', methods: ['POST'])]
+    public function clear(TodoStorage $storage): RedirectResponse
+    {
+        $storage->clear();
+        $this->addFlash('success', 'Liste vidée');
+
+        return $this->redirectToRoute('todo_index');
+    }
+
+    /**
+     * Statistiques chargées en AJAX par la page d'accueil.
+     * Le délai aléatoire (0,5 à 2 s) simule un back-end lent : c'est le support
+     * des exercices sur la synchronisation (auto-attente, pas de waitForTimeout).
+     */
+    #[Route('/api/stats', name: 'api_stats', methods: ['GET'])]
+    public function stats(Request $request, TodoStorage $storage): JsonResponse
+    {
+        $stats = $storage->stats();
+        // On libère le verrou de session AVANT d'attendre, sinon les autres
+        // requêtes du même navigateur (ajout, suppression...) seraient bloquées.
+        $request->getSession()->save();
+
+        usleep(random_int(500, 2000) * 1000);
+
+        return $this->json($stats);
     }
 }

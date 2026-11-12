@@ -1,247 +1,92 @@
-# Formation Symfony & Playwright
+# Automatiser ses tests end-to-end avec Playwright — projet fil rouge
 
-Projet pédagogique clé en main pour une séance de formation sur les tests end-to-end
-avec Playwright, appliqués à une application Symfony minimaliste.
+Projet pédagogique de la formation **Playwright (2 jours)** : une application Symfony
+volontairement simple (Todo List) et une suite de tests Playwright organisée par
+jour et par chapitre du programme.
 
-## Contenu de l'archive
+| Composant | Version |
+|-----------|---------|
+| Node.js | 24 LTS (Playwright exige Node.js ≥ 20) |
+| @playwright/test | 1.64.1 (même version dans `playwright-tests/Dockerfile` et `.gitlab-ci.yml`) |
+| Symfony / PHP | 7.4 / 8.4 (dans Docker) |
+
+## Arborescence
 
 ```
-formation-symfony-playwright/
-├── docker-compose.yml          # Orchestration app Symfony + tests Playwright
-├── symfony-app/                # Application Symfony (Todo List) à tester
-├── playwright-tests/           # Scénarios de tests Playwright (3 scénarios)
+.
+├── docker-compose.yml          # app Symfony (+ service optionnel playwright)
+├── .github/workflows/ci.yml    # CI GitHub Actions : smoke → matrice navigateurs → rapport fusionné
+├── .gitlab-ci.yml              # CI GitLab : build image app → smoke → suite complète en 2 shards
+├── symfony-app/                # application à tester
+├── playwright-tests/
+│   ├── playwright.config.js    # baseURL, 4 projects (chromium, firefox, webkit, mobile-chrome), rapports
+│   ├── tests/jour1/            # 01 premiers pas · 02 localisateurs · 03 actions · 04 assertions · 05 synchronisation
+│   ├── tests/jour2/            # 06 hooks/organisation · 07 données · 08 Page Object Model · 09 atelier diagnostic
+│   ├── tests/mes-exercices/    # dossier de travail des stagiaires
+│   ├── pages/TodoPage.js       # Page Object
+│   ├── fixtures/todo-test.js   # fixtures personnalisées (todoPage, listeRemplie)
+│   ├── data/taches.json        # jeu de données de test
+│   └── solutions/              # corrigés des exercices (npm run test:solutions)
 └── support-formation/
-    └── GUIDE-STAGIAIRE.md      # Support tutoriel pas-à-pas pour les stagiaires
-```
-
-## Prérequis
-
-### Outils à installer
-
-| Outil | Obligatoire pour | Installation |
-|-------|------------------|--------------|
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Lancer l'app Symfony et les tests en conteneur | macOS / Windows / Linux |
-| [Docker Compose](https://docs.docker.com/compose/) | Orchestrer les services (`app` + `playwright`) | Inclus avec Docker Desktop |
-| [Node.js](https://nodejs.org/) (v18 ou plus) | Voir l'automation en direct (`npm run test:pedagogique`) | Optionnel si Docker suffit |
-| [Python](https://www.python.org/downloads/) (3.9 ou plus) | Lancer les tests en Python (`pytest`) | Optionnel — alternative à Node.js |
-| [Git](https://git-scm.com/) | Cloner le dépôt | Recommandé |
-
-Connexion internet requise lors du premier build (téléchargement des dépendances
-Composer et npm).
-
-### Vérifier l'installation
-
-```bash
-docker --version
-docker compose version
-node --version    # optionnel, pour les tests locaux avec fenêtre visible
-npm --version     # optionnel, pour les tests locaux avec fenêtre visible
+    └── GUIDE-STAGIAIRE.md      # tutoriel complet des 2 jours (version Markdown du support apprenant)
 ```
 
 ## Démarrage rapide
 
 ```bash
-# 1. Cloner le projet (si besoin)
-git clone <url-du-depot>
-cd projet-symfony-playwrite
+# 1. Démarrer l'application (http://localhost:8000) et attendre qu'elle réponde
+docker compose up -d --wait app
 
-# 2. Construire les images Docker
-docker compose build
-
-# 3. Lancer l'application Symfony (en arrière-plan)
-docker compose up -d app
-# -> disponible sur http://localhost:8000
-
-# 4. Lancer les tests Playwright en mode headless (CI / validation)
-docker compose run --rm playwright
-
-# 5. Consulter le rapport HTML
-npx playwright show-report playwright-tests/playwright-report
-```
-
-## Voir l'automation en direct (approche pédagogique)
-
-Les tests Docker s'exécutent en mode headless (sans fenêtre visible). Pour
-**montrer l'automation** aux stagiaires, lancez les tests en local avec
-l'application Symfony déjà démarrée (`docker compose up -d app`) :
-
-```bash
+# 2. Installer et lancer les tests (Node.js 24)
 cd playwright-tests
-npm install
-npx playwright install chromium   # une seule fois, au premier lancement
-npm run test:pedagogique
+npm ci
+npx playwright install --with-deps
+npm run test:chromium        # ou : npm test  (4 navigateurs/appareils)
+npm run report
 ```
 
-Ce script ouvre une fenêtre Chromium, exécute les scénarios **un par un**
-(`--workers=1`) et ralentit chaque action de 800 ms (`slowMo`) pour faciliter
-le suivi visuel.
-
-### Commandes Playwright utiles
-
-| Commande | Où l'exécuter | Usage |
-|----------|---------------|-------|
-| `docker compose run --rm playwright` | Racine du projet | Tests headless via Docker |
-| `npm run test:headed` | `playwright-tests/` | Voir le navigateur, vitesse normale |
-| `npm run test:pedagogique` | `playwright-tests/` | Voir le navigateur, ralenti et séquentiel |
-| `npx playwright test --ui` | `playwright-tests/` | Mode interactif pas-à-pas |
-| `npm run report` | `playwright-tests/` | Ouvrir le rapport HTML |
-| `npx playwright show-report playwright-tests/playwright-report` | Racine du projet | Ouvrir le rapport depuis la racine |
-
-## Version Python (alternative à JavaScript)
-
-Le projet propose les **mêmes 4 scénarios** en Python (`todo.spec.py`), en miroir de la
-version JavaScript (`todo.spec.js`). Les deux versions coexistent : vous choisissez
-l'une ou l'autre selon le langage de la formation.
-
-### Prérequis Python
-
-| Outil | Version minimale | Installation |
-|-------|------------------|--------------|
-| [Python](https://www.python.org/downloads/) | 3.9 ou plus | macOS / Windows / Linux |
-| [pip](https://pip.pypa.io/) | Inclus avec Python | Vérifier avec `pip --version` |
-
-L'application Symfony doit déjà tourner (`docker compose up -d app`) avant de lancer
-les tests, comme pour la version JavaScript.
-
-### Installation pas à pas (Python)
+Sans Node.js, tout en Docker (comme en CI) :
 
 ```bash
-# 1. Vérifier que Python est disponible
-python3 --version
-pip3 --version
-
-# 2. Se placer dans le dossier des tests
-cd playwright-tests
-
-# 3. Créer un environnement virtuel (recommandé, une seule fois)
-python3 -m venv .venv
-
-# 4. Activer l'environnement virtuel
-source .venv/bin/activate          # macOS / Linux
-# .venv\Scripts\activate         # Windows (PowerShell)
-
-# 5. Installer les packages Python nécessaires
-pip install pytest pytest-playwright
-
-# 6. Télécharger le navigateur Chromium pour Playwright (une seule fois)
-playwright install chromium
-
-# 7. Vérifier l'installation
-pytest --version
-playwright --version
-```
-
-Packages installés :
-
-| Package | Rôle |
-|---------|------|
-| `pytest` | Framework de tests Python |
-| `pytest-playwright` | Plugin Playwright pour pytest (inclut la librairie `playwright`) |
-
-### Passer de JavaScript à Python
-
-| Élément | Version JavaScript (par défaut) | Version Python |
-|---------|--------------------------------|----------------|
-| Fichier de tests | `tests/todo.spec.js` | `tests/todo.spec.py` |
-| Configuration | `playwright.config.js` | `playwright.config.py` |
-| Gestionnaire de paquets | `npm` (`package.json`) | `pip` (environnement virtuel) |
-| Commande de lancement | `npm test` / `npx playwright test` | `pytest` |
-| Rapport HTML | `playwright-report/` | `playwright-report/` |
-
-Pour **basculer sur Python** :
-
-1. Ne pas exécuter les commandes `npm` — utiliser `pytest` à la place.
-2. Activer l'environnement virtuel Python (`source .venv/bin/activate`).
-3. Lancer les tests avec `pytest tests/todo.spec.py` (voir commandes ci-dessous).
-4. Pour revenir à JavaScript : désactiver le venv (`deactivate`) et reprendre les
-   commandes `npm` habituelles.
-
-Les deux versions partagent la même `baseURL` (`http://localhost:8000`) et les mêmes
-`data-testid` sur l'application Symfony.
-
-### Commandes Python utiles
-
-Depuis `playwright-tests/`, avec l'environnement virtuel activé et l'app Symfony
-démarrée :
-
-```bash
-# Tests headless (équivalent de npm test)
-pytest tests/todo.spec.py --browser chromium --base-url http://localhost:8000
-
-# Voir le navigateur (équivalent de npm run test:headed)
-pytest tests/todo.spec.py --browser chromium --headed --base-url http://localhost:8000
-
-# Mode pédagogique : navigateur visible, scénarios exécutés un par un
-pytest tests/todo.spec.py --browser chromium --headed --base-url http://localhost:8000 -n 0
-```
-
-> Le flag `-n 0` désactive le parallélisme pytest pour enchaîner les scénarios un par
-> un. Installez `pytest-xdist` (`pip install pytest-xdist`) si l'option `-n` n'est pas
-> reconnue, ou lancez les tests sans ce flag.
-
-| Commande | Usage |
-|----------|-------|
-| `pytest tests/todo.spec.py --browser chromium --base-url http://localhost:8000` | Tests headless |
-| `pytest tests/todo.spec.py --browser chromium --headed --base-url http://localhost:8000` | Navigateur visible |
-| `pytest tests/todo.spec.py --browser chromium --headed --base-url http://localhost:8000 -n 0` | Mode pédagogique (séquentiel) |
-| `pytest tests/todo.spec.py -v` | Affichage détaillé des scénarios |
-
-La configuration avancée (retries en CI, screenshots, trace) est centralisée dans
-`playwright.config.py`, sur le même modèle que `playwright.config.js`.
-
-## Application de démonstration
-
-Une simple "Todo List" en Symfony, sans base de données (stockage en session),
-pour rester légère et focaliser la séance sur Playwright plutôt que sur la
-configuration de l'application :
-
-- Affichage de la liste des tâches
-- Ajout d'une tâche
-- Suppression d'une tâche
-
-Tous les éléments clés de la page portent un attribut `data-testid`, pratique
-courante pour écrire des sélecteurs Playwright robustes.
-
-## Scénarios de tests Playwright fournis
-
-| # | Scénario | Fichier JavaScript | Fichier Python |
-|---|----------|--------------------|----------------|
-| 1 | Chargement de la page d'accueil et affichage du titre | `playwright-tests/tests/todo.spec.js` | `playwright-tests/tests/todo.spec.py` |
-| 2 | Ajout d'une nouvelle tâche | `playwright-tests/tests/todo.spec.js` | `playwright-tests/tests/todo.spec.py` |
-| 3 | Suppression d'une tâche existante | `playwright-tests/tests/todo.spec.js` | `playwright-tests/tests/todo.spec.py` |
-| 4 | Marquage d'une tâche comme terminée puis réouverture | `playwright-tests/tests/todo.spec.js` | `playwright-tests/tests/todo.spec.py` |
-
-Pour les stagiaires, voir le guide pas-à-pas : `support-formation/GUIDE-STAGIAIRE.md`.
-
-## Intégration continue (GitHub Actions)
-
-À chaque push ou pull request sur la branche `main`, la CI exécute
-automatiquement les tests E2E Playwright via Docker Compose.
-
-Workflow : `.github/workflows/ci.yml`
-
-Étapes exécutées :
-1. Construction des images Docker (`app` Symfony + `playwright`)
-2. Démarrage de l'application Symfony
-3. Attente de disponibilité sur `http://localhost:8000`
-4. Lancement des 3 scénarios Playwright en mode headless
-5. Publication du rapport HTML en artefact GitHub (onglet **Actions**)
-
-Pour consulter le rapport après une CI :
-1. Ouvrir l'onglet **Actions** du dépôt GitHub
-2. Cliquer sur l'exécution souhaitée
-3. Télécharger l'artefact **`playwright-report`**
-4. Décompresser le zip et ouvrir `index.html` dans un navigateur
-
-En CI, Playwright active automatiquement `forbidOnly` et 1 retry en cas
-d'échec (voir `playwright.config.js`).
-
-Reproduire la CI en local :
-
-```bash
-CI=true docker compose build
-docker compose up -d app
-# attendre que http://localhost:8000 réponde
+docker compose up -d --wait app
 CI=true docker compose run --rm playwright
-docker compose down -v
 ```
+
+## Scripts npm (dans `playwright-tests/`)
+
+| Script | Effet |
+|--------|-------|
+| `npm test` | Toute la suite sur les 4 projets |
+| `npm run test:chromium` | Toute la suite sur Chromium |
+| `npm run test:jour1` / `test:jour2` | Démonstrations d'une journée |
+| `npm run test:smoke` | Tests tagués `@smoke` |
+| `npm run test:headed` / `test:ui` / `test:debug` | Modes visuels et interactifs |
+| `npm run test:pedagogique` | Navigateur visible, ralenti (800 ms par action) |
+| `npm run test:solutions` | Corrigés des exercices |
+| `npm run codegen` | Enregistreur de tests sur la Todo List |
+| `npm run report` | Dernier rapport HTML |
+
+## L'application
+
+Todo List sans base de données (stockage en session : chaque test Playwright a un
+contexte de navigateur neuf, donc une liste vide). Fonctionnalités et notions associées :
+
+| Fonctionnalité | Notion Playwright |
+|----------------|-------------------|
+| Ajout avec liste déroulante « Priorité » | `fill`, `selectOption`, `press`, `getByLabel` |
+| Terminer / Réouvrir / Supprimer par ligne | mode strict, `filter`, chaînage |
+| Compteur, `data-completed`, classe `is-done` | `toHaveText`, `toHaveAttribute`, `toHaveClass` |
+| Filtres Toutes / Actives / Terminées | navigation, `toHaveURL` |
+| Message temporaire (3 s) | `toBeVisible` puis `toBeHidden` |
+| « Vider la liste » avec `confirm()` | `page.once('dialog')` |
+| Statistiques AJAX (`/api/stats`, délai 0,5 à 2 s) | auto-waiting, `waitForResponse`, `page.route` |
+
+## Points d'attention
+
+- **Ne jamais utiliser `http://app:8000`** comme URL de test : « .app » est un domaine que
+  les navigateurs forcent en HTTPS (HSTS préchargé). Le conteneur est joint par l'alias
+  `todo-app` (`docker-compose.yml`, `.gitlab-ci.yml`).
+- Garder **la même version de Playwright** dans `package.json`, `playwright-tests/Dockerfile`
+  et `.gitlab-ci.yml`.
+- Le serveur PHP intégré tourne avec `PHP_CLI_SERVER_WORKERS=8` pour supporter les tests
+  parallèles ; il ne doit jamais être utilisé en production.
