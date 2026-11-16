@@ -9,7 +9,7 @@ name: Tests E2E Playwright
 
 on:
   push:
-    branches: [main, 'formation-**']
+    branches: ['**']          # toutes les branches (main, corrigés…)
   pull_request:
     branches: [main]
   workflow_dispatch:          # bouton "Run workflow" dans l'onglet Actions
