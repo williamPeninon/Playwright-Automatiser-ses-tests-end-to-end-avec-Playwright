@@ -26,10 +26,21 @@ jour et par chapitre du programme.
 │   ├── pages/TodoPage.js       # Page Object
 │   ├── fixtures/todo-test.js   # fixtures personnalisées (todoPage, listeRemplie)
 │   ├── data/taches.json        # jeu de données de test
-│   └── solutions/              # corrigés des exercices (npm run test:solutions)
+│   ├── tests/todo.spec.py      # variante Python (pytest-playwright) des scénarios de base
+│   └── playwright.config.py    # configuration de la variante Python
 └── support-formation/
     └── GUIDE-STAGIAIRE.md      # tutoriel complet des 2 jours (version Markdown du support apprenant)
 ```
+
+## Branches
+
+| Branche | Contenu |
+|---------|---------|
+| `main` | Version stagiaires : application, démonstrations et dossier `tests/mes-exercices/`, **sans** les corrigés |
+| `corrigés` | `main` + les corrigés des exercices (`playwright-tests/solutions/`, `npm run test:solutions`) |
+
+Toute modification se fait sur `main`, puis `main` est fusionnée dans `corrigés` (`git switch corrigés && git merge main`).
+L'historique des anciennes branches est conservé sous les tags `archive/*`.
 
 ## Démarrage rapide
 
@@ -62,7 +73,6 @@ CI=true docker compose run --rm playwright
 | `npm run test:smoke` | Tests tagués `@smoke` |
 | `npm run test:headed` / `test:ui` / `test:debug` | Modes visuels et interactifs |
 | `npm run test:pedagogique` | Navigateur visible, ralenti (800 ms par action) |
-| `npm run test:solutions` | Corrigés des exercices |
 | `npm run codegen` | Enregistreur de tests sur la Todo List |
 | `npm run report` | Dernier rapport HTML |
 

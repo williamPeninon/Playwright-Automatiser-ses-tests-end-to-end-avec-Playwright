@@ -55,8 +55,7 @@ projet-symfony-playwright/
     ├── tests/mes-exercices/    # VOS exercices
     ├── pages/TodoPage.js       # Page Object (module 8)
     ├── fixtures/todo-test.js   # fixtures personnalisées (module 8)
-    ├── data/taches.json        # données de test (module 8)
-    └── solutions/              # corrigés (à n'ouvrir qu'après avoir cherché)
+    └── data/taches.json        # données de test (module 8)
 ```
 
 > 📌 **À retenir :** l'application et les tests sont deux projets séparés qui ne communiquent que par HTTP, exactement comme en entreprise : Playwright ne connaît pas le PHP, il pilote un navigateur.
@@ -1330,7 +1329,7 @@ docker compose down
 
 ## Annexe — Corrigés des exercices
 
-> ℹ️ **À savoir :** les corrigés sont aussi dans `playwright-tests/solutions/` et s'exécutent avec `npm run test:solutions`.
+> ℹ️ **À savoir :** les corrigés exécutables sont sur la branche `corrigés` du dépôt (dossier `playwright-tests/solutions/`, commande `npm run test:solutions`).
 
 ### A.1 — Exercice 1 : liste vide
 
