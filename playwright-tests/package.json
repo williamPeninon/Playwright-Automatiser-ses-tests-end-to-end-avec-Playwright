@@ -13,6 +13,7 @@
     "test:pedagogique": "cross-env PLAYWRIGHT_SLOW_MO=800 playwright test --project=chromium --headed --workers=1",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --project=chromium --debug",
+    "test:solutions": "playwright test --config=playwright.solutions.config.js",
     "codegen": "playwright codegen http://localhost:8000",
     "report": "playwright show-report"
   },

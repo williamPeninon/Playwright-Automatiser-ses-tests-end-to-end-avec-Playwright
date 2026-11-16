@@ -27,7 +27,8 @@ jour et par chapitre du programme.
 │   ├── fixtures/todo-test.js   # fixtures personnalisées (todoPage, listeRemplie)
 │   ├── data/taches.json        # jeu de données de test
 │   ├── tests/todo.spec.py      # variante Python (pytest-playwright) des scénarios de base
-│   └── playwright.config.py    # configuration de la variante Python
+│   ├── playwright.config.py    # configuration de la variante Python
+│   └── solutions/              # corrigés des exercices (npm run test:solutions)
 └── support-formation/
     └── GUIDE-STAGIAIRE.md      # tutoriel complet des 2 jours (version Markdown du support apprenant)
 ```
@@ -73,6 +74,7 @@ CI=true docker compose run --rm playwright
 | `npm run test:smoke` | Tests tagués `@smoke` |
 | `npm run test:headed` / `test:ui` / `test:debug` | Modes visuels et interactifs |
 | `npm run test:pedagogique` | Navigateur visible, ralenti (800 ms par action) |
+| `npm run test:solutions` | Corrigés des exercices |
 | `npm run codegen` | Enregistreur de tests sur la Todo List |
 | `npm run report` | Dernier rapport HTML |
 
